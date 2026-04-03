@@ -4,15 +4,24 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── PHP Runtime Limits (required for 2 GB ZIP uploads) ────────────────────────
-php_value upload_max_filesize 2048M
-php_value post_max_size       2200M
-php_value memory_limit        512M
-php_value max_execution_time  7200
-php_value max_input_time      7200
-
-# ── Disable PHP error display / logging ───────────────────────────────────────
-php_flag  display_errors  Off
-php_flag  log_errors      Off
+# php_value/php_flag only work with mod_php. With PHP-FPM (PHP 8.3), set these
+# in your PHP-FPM pool config (/etc/php/8.3/fpm/pool.d/www.conf) or php.ini:
+#   php_admin_value[upload_max_filesize] = 2048M
+#   php_admin_value[post_max_size]       = 2200M
+#   php_admin_value[memory_limit]        = 512M
+#   php_admin_value[max_execution_time]  = 7200
+#   php_admin_value[max_input_time]      = 7200
+#   php_admin_flag[display_errors]       = off
+#   php_admin_flag[log_errors]           = off
+<IfModule mod_php.c>
+    php_value upload_max_filesize 2048M
+    php_value post_max_size       2200M
+    php_value memory_limit        512M
+    php_value max_execution_time  7200
+    php_value max_input_time      7200
+    php_flag  display_errors      Off
+    php_flag  log_errors          Off
+</IfModule>
 
 # ── Privacy: suppress access log for this vhost (requires AllowOverride All) ──
 # Note: per-directory access log suppression requires the CustomLog directive
