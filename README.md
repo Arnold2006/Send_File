@@ -5,6 +5,29 @@ A self-hosted, WeTransfer-inspired file sharing application.
 
 ---
 
+## Network Architecture
+
+```
+Browser (HTTPS)
+      │
+      ▼
+pfSense Firewall  ──  port-forwards 443 → HAProxy
+      │
+      ▼
+HAProxy  ←  SSL/TLS termination (Let's Encrypt cert lives here)
+      │  plain HTTP (e.g. port 80 or a dedicated backend port)
+      ▼
+AAPanel v8 / Nginx  ←  this server, HTTP only, no SSL config needed
+      │  proxy_pass → 127.0.0.1:3001
+      ▼
+Node.js / Express (PM2)  ←  HTTP only, never exposed directly to the internet
+```
+
+**HAProxy and pfSense handle all HTTPS.**  
+Nginx in AAPanel is a plain HTTP reverse proxy — no SSL certificates are configured there.
+
+---
+
 ## Features
 
 | Feature | Detail |
@@ -143,24 +166,22 @@ ADMIN_API_KEY=change-me-to-a-long-random-string
 2. Open the **Configuration file** tab.
 3. **Replace the entire contents** with the file `nginx.conf.template` from this repo.
 4. Replace every occurrence of `files.example.com` with your actual domain.
-5. Replace the certificate paths if your Let's Encrypt certs are stored elsewhere  
-   (AAPanel usually writes them to `/www/server/panel/vhost/cert/<domain>/`).
-6. Click **Save** — Nginx will reload automatically.
+5. Click **Save** — Nginx will reload automatically.
 
-> **client_max_body_size** is set to `2048M` in the template to match the  
-> 2 GB per-file limit in the backend. Adjust both values together if needed.
+> **No SSL config goes here.** HAProxy on pfSense terminates TLS before traffic
+> reaches this server. Nginx only needs to listen on HTTP port 80 and proxy API
+> requests to Node.js.
 
----
+> **client_max_body_size** is set to `2048M` to match the 2 GB per-file limit
+> in multer. If you change the upload limit in one place, change it in both.
 
-### 7 — Enable SSL
-
-1. In the same site **Settings** → **SSL** tab.
-2. Choose **Let's Encrypt**, enter your email, click **Apply**.
-3. AAPanel will obtain the certificate and update the Nginx config paths automatically.
+> **HAProxy heads-up:** make sure HAProxy is configured to pass
+> `X-Forwarded-For` and `X-Forwarded-Proto: https` to Nginx, and that Nginx
+> forwards them to the backend. The template already does this.
 
 ---
 
-### 8 — Start the backend with PM2
+### 7 — Start the backend with PM2
 
 ```bash
 cd /www/wwwroot/Send_File
@@ -178,7 +199,7 @@ pm2 save
 pm2 startup
 ```
 
-Verify the backend is running:
+Verify the backend is running (internal HTTP, not exposed to the internet):
 
 ```bash
 pm2 status
@@ -187,9 +208,10 @@ curl http://127.0.0.1:3001/api/health
 
 ---
 
-### 9 — Verify the full stack
+### 8 — Verify the full stack
 
-Open `https://your-domain.com` in a browser — you should see the upload interface.
+Open `https://your-domain.com` in a browser — traffic flows through pfSense →
+HAProxy (HTTPS) → Nginx (HTTP) → Node.js. You should see the upload interface.
 
 ---
 
@@ -273,7 +295,9 @@ GET /api/health
 - Rate limiting: 20 uploads/hour and 100 API requests/15 min per IP.
 - The admin endpoint is disabled unless `ADMIN_API_KEY` is set.
 - Nginx blocks direct access to `.env`, `.log`, `.db`, and `.sqlite` files.
-- The backend only listens on `127.0.0.1:3001` — it is not exposed to the internet directly.
+- The backend only listens on `127.0.0.1:3001` — it is never exposed directly to the internet.
+- **TLS/SSL is terminated by HAProxy on pfSense** — Nginx and Node.js communicate over plain HTTP on the internal network only.
+- HSTS should be configured on HAProxy (not Nginx) since HAProxy owns the TLS connection.
 
 ---
 
