@@ -275,7 +275,13 @@ if ($downloadToken !== null) {
                         exit;
                     }
                     header('Content-Type: application/zip');
-                    header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"');
+                    // RFC 6266-compliant Content-Disposition with UTF-8 filename
+                    $asciiName = preg_replace('/[^\x20-\x7E]/', '_', $filename);
+                    header(
+                        'Content-Disposition: attachment;'
+                        . ' filename="' . str_replace('"', '\\"', $asciiName) . '";'
+                        . ' filename*=UTF-8\'\'' . rawurlencode($filename)
+                    );
                     header('Content-Length: ' . $fileSize);
                     header('Cache-Control: no-store, no-cache, must-revalidate');
                     header('Pragma: no-cache');
@@ -285,9 +291,10 @@ if ($downloadToken !== null) {
                     exit;
                 } else {
                     $pageMode = 'download';
+                    $rawSize  = filesize($filePath);
                     $fileInfo = [
                         'name'    => htmlspecialchars($filename, ENT_QUOTES, 'UTF-8'),
-                        'size'    => format_bytes((int) filesize($filePath)),
+                        'size'    => format_bytes($rawSize !== false ? $rawSize : 0),
                         'expires' => date('F j, Y', $expiresAt),
                         'url'     => base_url() . '/?d=' . $downloadToken . '&dl=1',
                         'token'   => $downloadToken,
