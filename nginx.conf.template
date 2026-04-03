@@ -1,0 +1,120 @@
+# Nginx site configuration for AAPanel v8
+#
+# How to use in AAPanel:
+#   1. In AAPanel → Website → Add Site.
+#      - Set the domain to your domain (e.g. files.example.com).
+#      - Set the root directory to /www/wwwroot/Send_File/frontend/build
+#        (the React production build).
+#      - Enable SSL via Let's Encrypt in the SSL tab.
+#   2. Open the "Configuration file" tab and **replace its contents** with
+#      this file (adjust the variables marked with TODO).
+#   3. Save and reload Nginx.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# TODO: replace every occurrence of "files.example.com" with your real domain.
+# TODO: replace the paths if your project lives somewhere other than
+#       /www/wwwroot/Send_File.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Upstream — the Node.js/Express backend managed by PM2.
+upstream send_file_backend {
+    server 127.0.0.1:3001;
+    keepalive 64;
+}
+
+# ── HTTP → HTTPS redirect ─────────────────────────────────────────────────────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name files.example.com;
+
+    # Let's Encrypt ACME challenge (AAPanel handles this automatically).
+    location /.well-known/acme-challenge/ {
+        root /www/wwwroot/Send_File/frontend/build;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── HTTPS main server block ───────────────────────────────────────────────────
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name files.example.com;
+
+    # ── SSL — managed by AAPanel / Let's Encrypt ──────────────────────────────
+    # AAPanel writes the certificate paths here automatically after you enable
+    # SSL in the panel.  Leave these lines as placeholders if you are pasting
+    # before enabling SSL; the panel will fill them in.
+    ssl_certificate     /www/server/panel/vhost/cert/files.example.com/fullchain.pem;
+    ssl_certificate_key /www/server/panel/vhost/cert/files.example.com/privkey.pem;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_tickets off;
+
+    # ── Security headers ──────────────────────────────────────────────────────
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header X-Frame-Options           "SAMEORIGIN" always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+
+    # ── Logging ───────────────────────────────────────────────────────────────
+    access_log /www/wwwlogs/files.example.com.log;
+    error_log  /www/wwwlogs/files.example.com.error.log;
+
+    # ── Document root (React build) ───────────────────────────────────────────
+    root  /www/wwwroot/Send_File/frontend/build;
+    index index.html;
+
+    # ── File upload size limit ────────────────────────────────────────────────
+    # Must be at least as large as the per-file limit set in multer (default 2 GB).
+    # AAPanel's default is 50 MB — increase it here.
+    client_max_body_size 2048M;
+
+    # ── Upload/download timeout — large files take time ──────────────────────
+    proxy_read_timeout    3600s;
+    proxy_send_timeout    3600s;
+    proxy_connect_timeout 75s;
+
+    # ── API reverse proxy — forward /api/* to Node.js ────────────────────────
+    location /api/ {
+        proxy_pass         http://send_file_backend;
+        proxy_http_version 1.1;
+
+        # Preserve the real client IP so Express rate-limiting works correctly.
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Required for keep-alive connections.
+        proxy_set_header Connection        "";
+
+        # Disable buffering so upload progress is reported in real time.
+        proxy_request_buffering off;
+        proxy_buffering         off;
+    }
+
+    # ── Static React assets — long cache ─────────────────────────────────────
+    location /static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ── React client-side routing — serve index.html for unknown paths ────────
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ── Block access to sensitive files ──────────────────────────────────────
+    location ~* \.(env|log|db|sqlite)$ {
+        deny all;
+        return 404;
+    }
+}

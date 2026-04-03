@@ -1,7 +1,7 @@
 // server.js — Express application entry point
 //
-// HTTP only — TLS/SSL termination is handled upstream by HAProxy.
-// Listens on PORT (default 3001).
+// HTTP only — TLS/SSL termination is handled by AAPanel's Nginx reverse proxy.
+// Listens on PORT (default 3001).  Set PORT in your .env file if needed.
 
 const express = require('express');
 const cors = require('cors');
@@ -20,8 +20,8 @@ const PORT = process.env.PORT || 3001;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 
-// Trust the first proxy (HAProxy) so that express-rate-limit reads the real
-// client IP from X-Forwarded-For rather than the proxy IP.
+// Trust the first proxy (AAPanel's Nginx) so that express-rate-limit reads the
+// real client IP from X-Forwarded-For rather than the loopback address.
 app.set('trust proxy', 1);
 
 app.use(cors({
