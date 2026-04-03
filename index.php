@@ -15,6 +15,7 @@ define('UPLOAD_DIR',          __DIR__ . '/uploads/');
 define('MAX_FILE_SIZE_BYTES', 2 * 1024 * 1024 * 1024); // 2 GB
 define('FILE_EXPIRY_SECONDS', 2 * 24 * 60 * 60);        // 48 hours
 define('TOKEN_LENGTH',        32);                        // hex chars (16 bytes)
+define('DOWNLOAD_CHUNK_SIZE', 8192);                      // bytes per read() during download
 
 // Suppress PHP errors from leaking into output or logs.
 ini_set('display_errors', '0');
@@ -274,20 +275,85 @@ if ($downloadToken !== null) {
                         http_response_code(500);
                         exit;
                     }
-                    header('Content-Type: application/zip');
+
+                    // Prevent the PHP execution time limit from killing the
+                    // script mid-transfer (large files on slow connections).
+                    set_time_limit(0);
+
                     // RFC 6266-compliant Content-Disposition with UTF-8 filename
                     $asciiName = preg_replace('/[^\x20-\x7E]/', '_', $filename);
+
+                    // ── HTTP Range support (resumable downloads) ─────────────
+                    $rangeStart = 0;
+                    $rangeEnd   = $fileSize - 1;
+                    $rangeHeader = $_SERVER['HTTP_RANGE'] ?? '';
+
+                    if ($rangeHeader !== '' && preg_match('/^bytes=(\d*)-(\d*)$/', $rangeHeader, $m)) {
+                        $reqStart = $m[1] !== '' ? (int) $m[1] : null;
+                        $reqEnd   = $m[2] !== '' ? (int) $m[2] : null;
+
+                        if ($reqStart === null) {
+                            // suffix-range: bytes=-N (last N bytes); $m[2] must be non-empty
+                            if ($reqEnd === null || $reqEnd === 0) {
+                                header('HTTP/1.1 416 Range Not Satisfiable');
+                                header('Content-Range: bytes */' . $fileSize);
+                                exit;
+                            }
+                            $rangeStart = max(0, $fileSize - $reqEnd);
+                        } else {
+                            $rangeStart = $reqStart;
+                        }
+                        if ($reqEnd !== null) {
+                            $rangeEnd = min($reqEnd, $fileSize - 1);
+                        }
+
+                        if ($rangeStart > $rangeEnd || $rangeStart >= $fileSize) {
+                            header('HTTP/1.1 416 Range Not Satisfiable');
+                            header('Content-Range: bytes */' . $fileSize);
+                            exit;
+                        }
+
+                        http_response_code(206);
+                        header('Content-Range: bytes ' . $rangeStart . '-' . $rangeEnd . '/' . $fileSize);
+                    }
+
+                    $sendLength = $rangeEnd - $rangeStart + 1;
+
+                    header('Content-Type: application/zip');
                     header(
                         'Content-Disposition: attachment;'
                         . ' filename="' . str_replace('"', '\\"', $asciiName) . '";'
                         . ' filename*=UTF-8\'\'' . rawurlencode($filename)
                     );
-                    header('Content-Length: ' . $fileSize);
+                    header('Content-Length: ' . $sendLength);
+                    header('Accept-Ranges: bytes');
                     header('Cache-Control: no-store, no-cache, must-revalidate');
                     header('Pragma: no-cache');
                     header('Expires: 0');
                     header('X-Content-Type-Options: nosniff');
-                    readfile($filePath);
+
+                    $fp = fopen($filePath, 'rb');
+                    if ($fp === false) {
+                        http_response_code(500);
+                        exit;
+                    }
+                    if ($rangeStart > 0) {
+                        if (fseek($fp, $rangeStart) !== 0) {
+                            fclose($fp);
+                            http_response_code(500);
+                            exit;
+                        }
+                    }
+                    $remaining = $sendLength;
+                    while ($remaining > 0 && !feof($fp)) {
+                        $chunk = fread($fp, min(DOWNLOAD_CHUNK_SIZE, $remaining));
+                        if ($chunk === false) {
+                            break;
+                        }
+                        echo $chunk;
+                        $remaining -= strlen($chunk);
+                    }
+                    fclose($fp);
                     exit;
                 } else {
                     $pageMode = 'download';
