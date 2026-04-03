@@ -46,7 +46,7 @@ function format_bytes(int $bytes): string
  */
 function base_url(): string
 {
-    $proto  = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? 'https';
+    $proto  = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? 'http';
     $host   = $_SERVER['HTTP_HOST']               ?? 'localhost';
     $script = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
     return $proto . '://' . $host . $script;
@@ -99,7 +99,12 @@ function cleanup_expired_uploads(): void
             delete_directory($tokenDir);
             continue;
         }
-        $uploadedAt = (int) file_get_contents($metaFile);
+        $metaContent = file_get_contents($metaFile);
+        if ($metaContent === false) {
+            delete_directory($tokenDir);
+            continue;
+        }
+        $uploadedAt = (int) $metaContent;
         if ($uploadedAt === 0 || (time() - $uploadedAt) > FILE_EXPIRY_SECONDS) {
             delete_directory($tokenDir);
         }
@@ -110,7 +115,6 @@ function cleanup_expired_uploads(): void
 
 if (!is_dir(UPLOAD_DIR)) {
     @mkdir(UPLOAD_DIR, 0750, true);
-    @file_put_contents(UPLOAD_DIR . '.htaccess', "Require all denied\n");
 }
 
 cleanup_expired_uploads();
@@ -188,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'upload
 
     // Sanitise filename (keep alphanumeric, dots, hyphens, underscores only)
     $origName = basename($f['name']);
-    $safeName = preg_replace('/[^\w\-.]/', '_', $origName);
+    $safeName = preg_replace('/[^a-zA-Z0-9\-._]/', '_', $origName);
     $safeName = preg_replace('/\.{2,}/', '.', $safeName);
     if (empty($safeName) || $safeName === '_zip' || $safeName === '.zip') {
         $safeName = 'archive.zip';
@@ -210,8 +214,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'upload
     // Metadata: only the upload timestamp — no user information stored
     @file_put_contents($tokenDir . '/.meta',     (string) time());
     @file_put_contents($tokenDir . '/.filename', $safeName);
-    // Block direct HTTP access to this directory
-    @file_put_contents($tokenDir . '/.htaccess', "Require all denied\n");
 
     $expiresAt = time() + FILE_EXPIRY_SECONDS;
 
@@ -268,8 +270,12 @@ if ($downloadToken !== null) {
                         ob_end_clean();
                     }
                     $fileSize = filesize($filePath);
+                    if ($fileSize === false) {
+                        http_response_code(500);
+                        exit;
+                    }
                     header('Content-Type: application/zip');
-                    header('Content-Disposition: attachment; filename="' . rawurlencode($filename) . '"');
+                    header('Content-Disposition: attachment; filename="' . addslashes($filename) . '"');
                     header('Content-Length: ' . $fileSize);
                     header('Cache-Control: no-store, no-cache, must-revalidate');
                     header('Pragma: no-cache');
