@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom drag-over highlight */
+.drag-active {
+  @apply border-brand-500 bg-brand-50;
+}
