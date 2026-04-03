@@ -267,7 +267,11 @@ if ($downloadToken !== null) {
                     $pageMode = 'not_found';
                 } elseif (isset($_GET['dl'])) {
                     // ── Serve file download ──────────────────────────────────
-                    if (ob_get_level()) {
+                    // Clean every nested output buffer level (PHP ini + Apache/FPM
+                    // can create more than one), so that echoed chunks go directly
+                    // to the underlying stream and are not silently accumulated in
+                    // an outer buffer that could exhaust PHP's memory limit.
+                    while (ob_get_level() > 0) {
                         ob_end_clean();
                     }
                     $fileSize = filesize($filePath);
@@ -327,6 +331,12 @@ if ($downloadToken !== null) {
                     );
                     header('Content-Length: ' . $sendLength);
                     header('Accept-Ranges: bytes');
+                    // Tell Apache/mod_deflate and any proxy not to apply content
+                    // encoding (e.g. gzip).  If mod_deflate were to buffer the
+                    // response for compression it could hold gigabytes in memory
+                    // before forwarding, causing HAProxy's backend timeout to fire
+                    // and the client to receive a truncated – but "complete" – file.
+                    header('Content-Encoding: identity');
                     header('Cache-Control: no-store, no-cache, must-revalidate');
                     header('Pragma: no-cache');
                     header('Expires: 0');
@@ -350,7 +360,10 @@ if ($downloadToken !== null) {
                             break;
                         }
                         $chunk = fread($fp, min(DOWNLOAD_CHUNK_SIZE, $remaining));
-                        if ($chunk === false) {
+                        if ($chunk === false || $chunk === '') {
+                            // false  = read error; '' = unexpected empty read (not
+                            // EOF on a regular file, but guard it to avoid an
+                            // infinite loop where $remaining never decreases).
                             break;
                         }
                         echo $chunk;
