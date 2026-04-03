@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# SendFile – Apache configuration
+# HTTPS is terminated by HAProxy / pfSense upstream; this server receives HTTP.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── PHP Runtime Limits (required for 2 GB ZIP uploads) ────────────────────────
+php_value upload_max_filesize 2048M
+php_value post_max_size       2200M
+php_value memory_limit        512M
+php_value max_execution_time  7200
+php_value max_input_time      7200
+
+# ── Disable PHP error display / logging ───────────────────────────────────────
+php_flag  display_errors  Off
+php_flag  log_errors      Off
+
+# ── Privacy: suppress access log for this vhost (requires AllowOverride All) ──
+# Note: per-directory access log suppression requires the CustomLog directive
+# to be set in the VirtualHost block in your Apache main config instead.
+# Uncomment the line below only if your Apache is built with mod_logio and
+# AllowOverride is set to All (some distributions support this):
+# CustomLog /dev/null combined
+
+# ── Security headers ──────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options  "nosniff"
+    Header always set X-Frame-Options         "DENY"
+    Header always set X-XSS-Protection        "1; mode=block"
+    Header always set Referrer-Policy         "no-referrer"
+    Header always set Permissions-Policy      "geolocation=(), camera=(), microphone=()"
+    # HSTS is handled by HAProxy upstream; do not set it here.
+</IfModule>
+
+# ── Block direct access to sensitive files ────────────────────────────────────
+<FilesMatch "^\.|\.meta$|\.filename$">
+    Require all denied
+</FilesMatch>
+
+# ── Block access to the uploads directory (defence-in-depth) ─────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block any request that directly targets a file inside /uploads/
+    RewriteRule ^uploads/ - [F,L]
+</IfModule>
+
+# ── Disable directory listing ─────────────────────────────────────────────────
+Options -Indexes -MultiViews
+
+# ── Character set ─────────────────────────────────────────────────────────────
+AddDefaultCharset UTF-8
