@@ -336,7 +336,7 @@ if ($downloadToken !== null) {
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    body { font-family: 'Inter', sans-serif; background-image: url('https://picsum.photos/1920/1080?random=<?= rand() ?>'); background-size: cover; background-position: center; background-attachment: fixed; }
     .drop-active { border-color: #6366f1 !important; background-color: #eef2ff !important; }
     .progress-bar-inner { transition: width .3s ease; }
     .btn-primary {
@@ -348,7 +348,7 @@ if ($downloadToken !== null) {
     .card { box-shadow: 0 25px 60px rgba(0,0,0,.25); }
   </style>
 </head>
-<body class="h-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col min-h-screen">
+<body class="h-full flex flex-col min-h-screen">
 
   <!-- Header -->
   <header class="py-6 px-8 flex items-center justify-between">
@@ -362,7 +362,7 @@ if ($downloadToken !== null) {
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 flex items-center justify-center px-4 py-10">
+  <main class="flex-1 flex items-center justify-start px-12 py-10">
 
 <?php if ($pageMode === 'upload'): ?>
     <!-- ═══ UPLOAD PAGE ═══ -->
