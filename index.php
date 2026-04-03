@@ -15,7 +15,7 @@ define('UPLOAD_DIR',          __DIR__ . '/uploads/');
 define('MAX_FILE_SIZE_BYTES', 2 * 1024 * 1024 * 1024); // 2 GB
 define('FILE_EXPIRY_SECONDS', 2 * 24 * 60 * 60);        // 48 hours
 define('TOKEN_LENGTH',        32);                        // hex chars (16 bytes)
-define('DOWNLOAD_CHUNK_SIZE', 8192);                      // bytes per read() during download
+define('DOWNLOAD_CHUNK_SIZE', 1048576);                   // bytes per read() during download (1 MiB)
 
 // Suppress PHP errors from leaking into output or logs.
 ini_set('display_errors', '0');
@@ -346,11 +346,22 @@ if ($downloadToken !== null) {
                     }
                     $remaining = $sendLength;
                     while ($remaining > 0 && !feof($fp)) {
+                        if (connection_aborted()) {
+                            break;
+                        }
                         $chunk = fread($fp, min(DOWNLOAD_CHUNK_SIZE, $remaining));
                         if ($chunk === false) {
                             break;
                         }
                         echo $chunk;
+                        // Flush all output buffers to Apache/HAProxy immediately.
+                        // Without this, data is held in PHP's buffer and HAProxy
+                        // can time out the backend connection mid-transfer on
+                        // large files, stopping the download at a random offset.
+                        if (ob_get_level()) {
+                            ob_flush();
+                        }
+                        flush();
                         $remaining -= strlen($chunk);
                     }
                     fclose($fp);
