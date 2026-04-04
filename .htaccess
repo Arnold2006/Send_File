@@ -40,6 +40,16 @@
     # HSTS is handled by HAProxy upstream; do not set it here.
 </IfModule>
 
+# ── Prevent Apache from compressing file download responses ──────────────────
+# mod_deflate buffers the entire response for compression before forwarding it.
+# For binary ZIP files this would (a) corrupt the data if the browser does not
+# decompress it, and (b) exhaust memory / trigger a HAProxy backend timeout on
+# large files.  Setting the "no-gzip" and "dont-vary" environment variables
+# tells mod_deflate to skip compression for these requests entirely.
+<IfModule mod_setenvif.c>
+    SetEnvIf Query_String "(^|&)dl=" no-gzip dont-vary
+</IfModule>
+
 # ── Block direct access to sensitive files ────────────────────────────────────
 <FilesMatch "^\.|\.meta$|\.filename$">
     Require all denied

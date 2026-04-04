@@ -267,6 +267,12 @@ if ($downloadToken !== null) {
                     $pageMode = 'not_found';
                 } elseif (isset($_GET['dl'])) {
                     // ── Serve file download ──────────────────────────────────
+                    // Disable PHP's own zlib output compression first, before
+                    // any output buffer is touched.  ob_end_clean() will close
+                    // the zlib buffer that zlib.output_compression creates, but
+                    // calling ini_set here is a belt-and-suspenders measure that
+                    // works even when the buffer cannot be removed.
+                    ini_set('zlib.output_compression', '0');
                     // Clean every nested output buffer level (PHP ini + Apache/FPM
                     // can create more than one), so that echoed chunks go directly
                     // to the underlying stream and are not silently accumulated in
