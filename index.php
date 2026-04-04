@@ -337,12 +337,12 @@ if ($downloadToken !== null) {
                     );
                     header('Content-Length: ' . $sendLength);
                     header('Accept-Ranges: bytes');
-                    // Tell Apache/mod_deflate and any proxy not to apply content
-                    // encoding (e.g. gzip).  If mod_deflate were to buffer the
-                    // response for compression it could hold gigabytes in memory
-                    // before forwarding, causing HAProxy's backend timeout to fire
-                    // and the client to receive a truncated – but "complete" – file.
-                    header('Content-Encoding: identity');
+                    // Do NOT send Content-Encoding: identity.  If PHP's
+                    // zlib.output_compression or another layer is active it will
+                    // have already set Content-Encoding: gzip; overriding that
+                    // with "identity" makes the browser save gzip-compressed bytes
+                    // as a ZIP file (corrupt).  mod_deflate buffering is prevented
+                    // by the no-gzip / no-brotli env-vars set in .htaccess.
                     header('Cache-Control: no-store, no-cache, must-revalidate');
                     header('Pragma: no-cache');
                     header('Expires: 0');
