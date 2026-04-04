@@ -41,13 +41,14 @@
 </IfModule>
 
 # ── Prevent Apache from compressing file download responses ──────────────────
-# mod_deflate buffers the entire response for compression before forwarding it.
-# For binary ZIP files this would (a) corrupt the data if the browser does not
-# decompress it, and (b) exhaust memory / trigger a HAProxy backend timeout on
-# large files.  Setting the "no-gzip" and "dont-vary" environment variables
-# tells mod_deflate to skip compression for these requests entirely.
+# mod_deflate / mod_brotli buffer the entire response before forwarding it.
+# For binary ZIP files this corrupts the data (browser saves gzip bytes as .zip)
+# and exhausts memory on large files.  Two independent mechanisms are used so
+# that at least one is always active:
+#   1. SetEnvIf  (requires mod_setenvif)
+#   2. RewriteRule [E=] flags  (requires mod_rewrite, confirmed active)
 <IfModule mod_setenvif.c>
-    SetEnvIf Query_String "(^|&)dl=" no-gzip dont-vary
+    SetEnvIf Query_String "dl=" no-gzip no-brotli dont-vary
 </IfModule>
 
 # ── Block direct access to sensitive files ────────────────────────────────────
@@ -61,6 +62,11 @@
 
     # Block any request that directly targets a file inside /uploads/
     RewriteRule ^uploads/ - [F,L]
+
+    # Belt-and-suspenders: also set compression-disable flags via mod_rewrite
+    # in case mod_setenvif is unavailable on this server.
+    RewriteCond %{QUERY_STRING} dl=
+    RewriteRule ^ - [E=no-gzip:1,E=no-brotli:1,E=dont-vary:1]
 </IfModule>
 
 # ── Disable directory listing ─────────────────────────────────────────────────
