@@ -441,7 +441,8 @@ if ($downloadToken !== null) {
     }
     .btn-primary:hover { background: linear-gradient(135deg, #4338ca, #6d28d9); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,.35); }
     .btn-primary:active { transform: translateY(0); }
-    .card { box-shadow: 0 25px 60px rgba(0,0,0,.25); }
+    .card { box-shadow: 0 25px 60px rgba(0,0,0,.25); background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .outside-text { text-shadow: 0 1px 6px rgba(0,0,0,.55); }
   </style>
 </head>
 <body class="h-full flex flex-col min-h-screen">
@@ -454,7 +455,7 @@ if ($downloadToken !== null) {
       </svg>
       <span class="text-white font-semibold text-xl tracking-tight">SendFile</span>
     </a>
-    <span class="text-slate-400 text-sm hidden sm:block">Anonymous · No registration · No tracking</span>
+    <span class="text-slate-200 text-sm hidden sm:block outside-text">Anonymous · No registration · No tracking</span>
   </header>
 
   <!-- Main Content -->
@@ -463,7 +464,7 @@ if ($downloadToken !== null) {
 <?php if ($pageMode === 'upload'): ?>
     <!-- ═══ UPLOAD PAGE ═══ -->
     <div class="w-full max-w-xl animate-slide-up">
-      <div class="bg-white rounded-3xl card p-8 sm:p-10">
+      <div class="rounded-3xl card p-8 sm:p-10">
 
         <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">Send a ZIP file</h1>
         <p class="text-slate-500 mb-8 text-sm">Files are stored anonymously and deleted automatically after <strong>2 days</strong>.</p>
@@ -562,7 +563,7 @@ if ($downloadToken !== null) {
 <?php elseif ($pageMode === 'download'): ?>
     <!-- ═══ DOWNLOAD PAGE ═══ -->
     <div class="w-full max-w-md animate-slide-up">
-      <div class="bg-white rounded-3xl card p-8 sm:p-10 text-center">
+      <div class="rounded-3xl card p-8 sm:p-10 text-center">
 
         <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <svg class="w-9 h-9 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -614,7 +615,7 @@ if ($downloadToken !== null) {
 <?php elseif ($pageMode === 'expired'): ?>
     <!-- ═══ EXPIRED PAGE ═══ -->
     <div class="w-full max-w-sm animate-slide-up">
-      <div class="bg-white rounded-3xl card p-10 text-center">
+      <div class="rounded-3xl card p-10 text-center">
         <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <svg class="w-9 h-9 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -631,7 +632,7 @@ if ($downloadToken !== null) {
 <?php else: ?>
     <!-- ═══ 404 PAGE ═══ -->
     <div class="w-full max-w-sm animate-slide-up">
-      <div class="bg-white rounded-3xl card p-10 text-center">
+      <div class="rounded-3xl card p-10 text-center">
         <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <svg class="w-9 h-9 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
@@ -650,7 +651,7 @@ if ($downloadToken !== null) {
   </main>
 
   <!-- Footer -->
-  <footer class="py-5 text-center text-slate-600 text-xs">
+  <footer class="py-5 text-center text-slate-200 text-xs outside-text">
     <p>No accounts &nbsp;·&nbsp; No database &nbsp;·&nbsp; No logs &nbsp;·&nbsp; Files deleted after 2 days</p>
   </footer>
 
