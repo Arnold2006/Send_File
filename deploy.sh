@@ -63,7 +63,7 @@ chown -R "${WEB_USER}:${WEB_USER}" uploads/
 
 echo "==> Setting directory and file permissions..."
 # Directories: owner read/write/execute, group and others read/execute (755)
-chmod -R 755 uploads/
+chmod -R 750 uploads/
 
 echo ""
 echo "==> Deployment complete."
