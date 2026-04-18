@@ -583,6 +583,7 @@ header(
     . "script-src 'nonce-{$cspNonce}'; "
     . "style-src 'nonce-{$cspNonce}' https://fonts.googleapis.com; "
     . "font-src https://fonts.gstatic.com; "
+    . "img-src https://picsum.photos https://fastly.picsum.photos; "
     . "connect-src 'self'; "
     . "form-action 'self'; "
     . "base-uri 'self'; "
@@ -611,8 +612,8 @@ header(
     .animate-slide-up   { animation: slideUp .4s ease-out; }
     .animate-pulse-slow { animation: pulse   3s cubic-bezier(.4,0,.6,1) infinite; }
     /* App-specific styles */
-    /* Background is a pure-CSS gradient — no external image request */
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e3a8a 100%); background-attachment: fixed; }
+    /* Background image from picsum.photos */
+    body { font-family: 'Inter', sans-serif; background-image: url('https://picsum.photos/1920/1080?random=<?= rand() ?>'); background-size: cover; background-position: center; background-attachment: fixed; }
     .drop-active { border-color: #6366f1 !important; background-color: #eef2ff !important; }
     .progress-bar-inner { transition: width .3s ease; }
     .btn-primary {
