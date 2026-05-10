@@ -652,8 +652,7 @@ header(
 
         <!-- Drop zone -->
         <div id="dropZone"
-             class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 hover:border-indigo-400 hover:bg-indigo-50"
-             onclick="document.getElementById('fileInput').click()">
+             class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 hover:border-indigo-400 hover:bg-indigo-50">
 
           <svg id="dzIcon" class="mx-auto mb-4 w-14 h-14 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 5.75 5.75 0 011.987 4.595A4.5 4.5 0 0117.25 19.5H6.75z"/>
@@ -675,7 +674,7 @@ header(
             <p id="previewName" class="text-slate-800 font-medium text-sm truncate"></p>
             <p id="previewSize" class="text-slate-500 text-xs"></p>
           </div>
-          <button onclick="resetUpload()" class="text-slate-400 hover:text-slate-600 transition-colors ml-2 flex-shrink-0" title="Remove file">
+          <button id="removeFileBtn" class="text-slate-400 hover:text-slate-600 transition-colors ml-2 flex-shrink-0" title="Remove file">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -686,7 +685,7 @@ header(
         <div id="errorBox" class="hidden mt-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm"></div>
 
         <!-- Upload button -->
-        <button id="uploadBtn" onclick="startUpload()"
+        <button id="uploadBtn"
                 class="btn-primary w-full mt-6 py-3.5 rounded-xl text-white font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 disabled>
           Upload &amp; Get Link
@@ -716,9 +715,8 @@ header(
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Share this link</label>
           <div class="flex gap-2">
             <input id="shareLink" type="text" readonly
-                   class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-text"
-                   onclick="this.select()">
-            <button onclick="copyLink()"
+                   class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-text">
+            <button id="copyBtn"
                     class="btn-primary flex-shrink-0 px-4 py-2.5 rounded-xl text-white text-sm font-medium flex items-center gap-1.5">
               <svg id="copyIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
@@ -729,7 +727,7 @@ header(
 
           <p id="successExpiry" class="text-xs text-slate-400 mt-3 text-center"></p>
 
-          <button onclick="resetUpload()" class="mt-4 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <button id="resetBtn" class="mt-4 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
             Send another file
           </button>
         </div>
@@ -858,6 +856,16 @@ const progressSpeed  = document.getElementById('progressSpeed');
 const successSection = document.getElementById('successSection');
 const shareLink      = document.getElementById('shareLink');
 const successExpiry  = document.getElementById('successExpiry');
+
+// ── Click handlers (wired here to satisfy CSP nonce; inline onclick is blocked)
+dropZone.addEventListener('click', (e) => {
+  if (e.target !== fileInput) fileInput.click();
+});
+document.getElementById('removeFileBtn').addEventListener('click', () => resetUpload());
+uploadBtn.addEventListener('click', () => startUpload());
+document.getElementById('copyBtn').addEventListener('click', () => copyLink());
+document.getElementById('resetBtn').addEventListener('click', () => resetUpload());
+shareLink.addEventListener('click', () => shareLink.select());
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtBytes(b) {
