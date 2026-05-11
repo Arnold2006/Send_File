@@ -636,7 +636,7 @@ header(
       </svg>
       <span class="text-white font-semibold text-xl tracking-tight">SendFile</span>
     </a>
-    <span class="text-slate-200 text-sm hidden sm:block outside-text">Anonymous · No registration · No tracking</span>
+    <span class="text-slate-200 text-sm hidden sm:block outside-text">Write Admin on info@tera-sat.com</span>
   </header>
 
   <!-- Main Content -->
